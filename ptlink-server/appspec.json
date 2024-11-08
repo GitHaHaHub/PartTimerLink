@@ -1,0 +1,24 @@
+{
+"version": 1,
+"Resources": [
+    {
+    "TargetService": {
+        "Type": "AWS::ECS::Service",
+        "Properties": {
+        "TaskDefinition": "arn:aws:ecs:ap-northeast-2:203918852273:task-definition/PtlServerTaskDef:1",
+        "LoadBalancerInfo": {
+            "ContainerName": "PtlServerContainer",
+            "ContainerPort": 8080
+        },
+        "CapacityProviderStrategy": [
+            {
+                "CapacityProvider": "Infra-ECS-Cluster-PtlServerCluster-9216f671-EC2CapacityProvider-NujtlFysmp5C",
+                "Base": 0,
+                "Weight": 1
+            }
+        ]
+        }
+    }
+    }
+]
+}
