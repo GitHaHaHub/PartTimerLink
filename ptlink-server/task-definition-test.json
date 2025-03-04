@@ -27,14 +27,15 @@
                     "max-buffer-size": "25m",
                     "awslogs-region": "${AWS_REGION}",
                     "awslogs-stream-prefix": "ecs"
-                }
+                },
+                "secretOptions": []
             },
             "systemControls": []
         }
     ],
     "taskRoleArn": "arn:aws:iam::203918852273:role/ecsTaskExecutionRole",
     "executionRoleArn": "arn:aws:iam::203918852273:role/ecsTaskExecutionRole",
-    "networkMode": "awsvpc",
+    "networkMode": "bridge",
     "volumes": [],
     "placementConstraints": [],
     "requiresCompatibilities": [

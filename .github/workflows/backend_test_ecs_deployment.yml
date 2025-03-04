@@ -3,7 +3,7 @@ name: Deploy to Amazon ECS
 on:
   push:
     branches:
-      - main
+      - test
 
 jobs:
   deploy:
@@ -43,9 +43,9 @@ jobs:
 
       - name: inject environment variables to task-definition.json
         env:
-              ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-              ECR_REPOSITORY: ${{ env.ECR_REPOSITORY }}
-              IMAGE_TAG: ${{ github.sha }}
+                ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+                ECR_REPOSITORY: ${{ env.ECR_REPOSITORY }}
+                IMAGE_TAG: ${{ github.sha }}
         run: |
             sed -i -e 's/\${ECS_TASK_DEFINITION_NAME}/${{ env.ECS_TASK_DEFINITION_NAME }}/g' \
                     -e 's/\${ECS_CONTAINER_NAME}/${{ env.ECS_CONTAINER_NAME }}/g' \
@@ -66,6 +66,7 @@ jobs:
                     -e 's/\${AWS_RDS_MASTER_USERNAME}/${{ env.AWS_RDS_MASTER_USERNAME }}/g' \
                     -e 's/\${AWS_RDS_MASTER_PASSWORD}/${{ env.AWS_RDS_MASTER_PASSWORD }}/g' src/main/resources/application.properties
     
+
       - name: Build with Gradle Wrapper
         run: ./gradlew build -x test
 
@@ -92,9 +93,6 @@ jobs:
         uses: aws-actions/amazon-ecs-deploy-task-definition@v2
         with:
           task-definition: ${{ steps.task-def.outputs.task-definition }}
-          service: ${{ env.ECS_SERVICE }}
           cluster: ${{ env.ECS_CLUSTER }}
-          wait-for-service-stability: true
-          codedeploy-appspec: ${{ env.JAVA_PROJECT_NAME }}/appspec.json
-          codedeploy-application: AppECS-${{ env.ECS_CLUSTER }}-${{ env.ECS_SERVICE }}
-          codedeploy-deployment-group: DgpECS-${{ env.ECS_CLUSTER }}-${{ env.ECS_SERVICE }}
+          run-task: true
+          run-task-launch-type: EC2
