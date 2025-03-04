@@ -5,14 +5,14 @@
     "TargetService": {
         "Type": "AWS::ECS::Service",
         "Properties": {
-        "TaskDefinition": "arn:aws:ecs:ap-northeast-2:203918852273:task-definition/PtlServerTaskDef:1",
+        "TaskDefinition": "arn:aws:ecs:ap-northeast-2:203918852273:task-definition/${ECS_TASK_DEFINITION_NAME}",
         "LoadBalancerInfo": {
-            "ContainerName": "PtlServerContainer",
+            "ContainerName": "${ECS_CONTAINER_NAME}",
             "ContainerPort": 8080
         },
         "CapacityProviderStrategy": [
             {
-                "CapacityProvider": "Infra-ECS-Cluster-PtlServerCluster-9216f671-EC2CapacityProvider-NujtlFysmp5C",
+                "CapacityProvider": "${ECS_CAPACITY_PROVIDER}",
                 "Base": 0,
                 "Weight": 1
             }
