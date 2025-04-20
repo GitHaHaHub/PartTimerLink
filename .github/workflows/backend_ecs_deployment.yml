@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - main
+    paths:
+      - 'ptlink-server/**'
+      - '.github/workflows/backend_ecs_deployment.yml'
 
 jobs:
   deploy:

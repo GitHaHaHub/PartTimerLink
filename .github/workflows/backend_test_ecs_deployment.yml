@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - test
+    paths:
+      - 'ptlink-server/**'
+      - '.github/workflows/backend_test_ecs_deployment.yml'
 
 jobs:
   deploy:
