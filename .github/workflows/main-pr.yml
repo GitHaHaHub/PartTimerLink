@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   Main-pr-generate-and-merge:
-    if: startsWith(github.event.pull_request.title, 'chore(develop)')
+    if: github.event.pull_request.merged == true && startsWith(github.event.pull_request.title, 'chore(develop)')
     runs-on: ubuntu-latest
 
     steps:
