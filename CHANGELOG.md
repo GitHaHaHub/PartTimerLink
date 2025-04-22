@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.0](https://github.com/GitHaHaHub/PartTimerLink/compare/v1.1.0...v1.2.0) (2025-04-22)
+
+
+### Features
+
+* trigger github actions ([5f6158c](https://github.com/GitHaHaHub/PartTimerLink/commit/5f6158ca2985d01aff10dfa9b1a4c11494467017))
+
 ## [1.1.0](https://github.com/GitHaHaHub/PartTimerLink/compare/v1.0.0...v1.1.0) (2025-04-22)
 
 
