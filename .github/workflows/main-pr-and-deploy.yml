@@ -1,0 +1,258 @@
+name: main-pr
+
+on:
+  pull_request:
+    types: [closed]
+    branches:
+      - develop
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  Main-pr-generate-and-merge:
+    if: github.event.pull_request.merged == true && startsWith(github.event.pull_request.title, 'chore(develop)')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout develop
+        uses: actions/checkout@v4
+        with:
+          ref: develop
+          fetch-depth: 0
+
+      - name: Set up Git
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "github-actions@github.com"
+
+      - name: Get Data
+        id: get-data
+        run: |
+          git fetch origin develop
+
+          # Capture commit message safely
+          COMMIT_MSG=$(git log origin/develop -1 --pretty=%B)
+          # Trim any trailing newline
+          COMMIT_MSG="${COMMIT_MSG%"${COMMIT_MSG##*[![:space:]]}"}"
+          echo "commit_msg<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$COMMIT_MSG" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+
+          # Capture version (may be empty)
+          VERSION=$(echo "$COMMIT_MSG" | grep -oP '\d+\.\d+\.\d+')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+
+      - name: Create PR from develop to main
+        id: create-pr
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR_URL=$(gh pr create \
+          --base main \
+          --head develop \
+          --title "$(echo "${{ github.event.pull_request.title }}" | sed 's/chore(develop):/chore(main):/')" \
+          --body "${{ github.event.pull_request.body }}")
+
+          PR_NUMBER=$(echo "$PR_URL" | grep -oE '[0-9]+$')
+          echo "pull-request-number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
+
+      - name: Merge PR
+        id: merge-pr
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          COMMIT_MSG="$(echo "${{ steps.get-data.outputs.commit_msg }}")"
+          FINAL_MSG=$(echo "$COMMIT_MSG" | sed 's/chore(develop):/chore(main):/')
+          
+          git fetch origin main
+          git checkout main
+
+          git merge --no-ff "origin/develop" -m "$FINAL_MSG"
+          git push origin main
+
+
+      - name: Add published label to PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.addLabels({
+              issue_number: ${{ steps.create-pr.outputs.pull-request-number }},
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: ["autorelease: published"]
+            })
+
+      - name: Tag main
+        id: tag-main
+        run: |
+              git fetch origin main
+              git tag -f "${{ steps.get-data.outputs.version }}"
+              git push -f origin "${{ steps.get-data.outputs.version }}"
+
+  Check-folder-changes:
+    needs: Main-pr-generate-and-merge
+    runs-on: ubuntu-latest
+    outputs:
+      backend_changed: ${{ steps.check.outputs.backend_changed }}
+      frontend_changed: ${{ steps.check.outputs.frontend_changed }}
+      
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Fetch main branch
+        run: |
+          git fetch origin main
+          git checkout origin/main
+
+      - name: Check for changes in ptlink-server
+        id: check
+        run: |
+          git diff --name-only HEAD~1 HEAD > changed_files.txt
+          echo "Changed files:"
+          cat changed_files.txt
+
+          if grep -q "^ptlink-server/" changed_files.txt; then
+            echo "backend_changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "backend_changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          if grep -q "^ptlink-client/" changed_files.txt; then
+            echo "frontend_changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "frontend_changed=false" >> "$GITHUB_OUTPUT"
+          fi
+        
+      - name: Output changes
+        run: |
+          echo "Backend changed: ${{ steps.check.outputs.backend_changed }}"
+          echo "Frontend changed: ${{ steps.check.outputs.frontend_changed }}"
+
+
+  deploy-backend:
+    needs: Check-folder-changes
+    if: needs.Check-folder-changes.outputs.backend_changed == 'true'
+    name: deploy
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: ptlink-server
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Gradle 8.10.2
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.10.2"
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ vars.AWS_REGION }}
+  
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: inject environment variables to task-definition.json
+        env:
+              ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+              ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
+              IMAGE_TAG: ${{ github.sha }}
+        run: |
+            sed -i -e 's/\${ECS_TASK_DEFINITION_NAME}/${{ vars.ECS_TASK_DEFINITION_NAME }}/g' \
+                    -e 's/\${ECS_CONTAINER_NAME}/${{ vars.ECS_CONTAINER_NAME }}/g' \
+                    -e 's/\${AWS_REGION}/${{ vars.AWS_REGION }}/g' \
+                    -e 's/\${ECS_IMAGE_URI}/$ECR_REGISTRY%$ECR_REPOSITORY:$IMAGE_TAG/g' ${{ vars.ECS_TASK_DEFINITION_FILE }}
+
+      - name: inject environment variables to appspec.json
+        run: |
+            sed -i -e 's/\${ECS_TASK_DEFINITION_NAME}/${{ vars.ECS_TASK_DEFINITION_NAME }}/g' \
+                    -e 's/\${ECS_CONTAINER_NAME}/${{ vars.ECS_CONTAINER_NAME }}/g' \
+                    -e 's/\${ECS_CAPACITY_PROVIDER}/${{ vars.ECS_CAPACITY_PROVIDER }}/g' appspec.json
+
+      - name: inject environment variables to application.properties
+        run: |
+            sed -i -e 's/\${AWS_RDS_DB_HOST}/${{ vars.AWS_RDS_DB_HOST }}/g' \
+                    -e 's/\${AWS_RDS_DB_PORT}/${{ vars.AWS_RDS_DB_PORT }}/g' \
+                    -e 's/\${AWS_RDS_DB_NAME}/${{ vars.AWS_RDS_DB_NAME }}/g' \
+                    -e 's/\${AWS_RDS_MASTER_USERNAME}/${{ secrets.AWS_RDS_MASTER_USERNAME }}/g' \
+                    -e 's/\${AWS_RDS_MASTER_PASSWORD}/${{ secrets.AWS_RDS_MASTER_PASSWORD }}/g' src/main/resources/application.properties
+    
+      - name: Build with Gradle Wrapper
+        run: ./gradlew build -x test
+
+      - name: Build, tag, and push image to Amazon ECR
+        id: build-image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker buildx build --provenance=false --platform linux/amd64 -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+  
+      - name: Fill in the new image ID in the Amazon ECS task definition
+        id: task-def
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: ${{ vars.ECS_TASK_DEFINITION_FILE }}
+          container-name: ${{ vars.ECS_CONTAINER_NAME }}
+          image: ${{ steps.build-image.outputs.image }}
+  
+      - name: Deploy to Amazon ECS
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: ${{ steps.task-def.outputs.task-definition }}
+          service: ${{ vars.ECS_SERVICE }}
+          cluster: ${{ vars.ECS_CLUSTER }}
+          wait-for-service-stability: true
+          codedeploy-appspec: appspec.json
+          codedeploy-application: AppECS-${{ vars.ECS_CLUSTER }}-${{ vars.ECS_SERVICE }}
+          codedeploy-deployment-group: DgpECS-${{ vars.ECS_CLUSTER }}-${{ vars.ECS_SERVICE }}
+
+
+  deploy-frontend:
+    needs: Check-folder-changes
+    if: needs.Check-folder-changes.outputs.frontend_changed == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: ptlink-client
+      
+      - name: build
+        run: |
+          npm install
+          npm run build
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Deploy static site to S3 bucket
+        run: |
+          cd ptlink-client
+          aws s3 sync dist s3://ptlink-client-bucket --delete
