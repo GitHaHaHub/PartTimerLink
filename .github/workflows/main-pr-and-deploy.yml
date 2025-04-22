@@ -1,4 +1,4 @@
-name: main-pr
+name: main-pr-and-deploy
 
 on:
   pull_request:
@@ -15,6 +15,10 @@ jobs:
   Main-pr-generate-and-merge:
     if: github.event.pull_request.merged == true && startsWith(github.event.pull_request.title, 'chore(develop)')
     runs-on: ubuntu-latest
+    outputs:
+      pull-request-number: ${{ steps.create-pr.outputs.pull-request-number }}
+      version: ${{ steps.get-data.outputs.version }}
+      commit_msg: ${{ steps.get-data.outputs.commit_msg }}
 
     steps:
       - name: Checkout develop
@@ -45,7 +49,6 @@ jobs:
           VERSION=$(echo "$COMMIT_MSG" | grep -oP '\d+\.\d+\.\d+')
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
-
       - name: Create PR from develop to main
         id: create-pr
         env:
@@ -73,25 +76,6 @@ jobs:
 
           git merge --no-ff "origin/develop" -m "$FINAL_MSG"
           git push origin main
-
-
-      - name: Add published label to PR
-        uses: actions/github-script@v7
-        with:
-          script: |
-            github.rest.issues.addLabels({
-              issue_number: ${{ steps.create-pr.outputs.pull-request-number }},
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              labels: ["autorelease: published"]
-            })
-
-      - name: Tag main
-        id: tag-main
-        run: |
-              git fetch origin main
-              git tag -f "${{ steps.get-data.outputs.version }}"
-              git push -f origin "${{ steps.get-data.outputs.version }}"
 
   Check-folder-changes:
     needs: Main-pr-generate-and-merge
@@ -141,6 +125,9 @@ jobs:
     if: needs.Check-folder-changes.outputs.backend_changed == 'true'
     name: deploy
     runs-on: ubuntu-22.04
+    defaults:
+      run:
+        working-directory: ptlink-client
 
     steps:
       - name: Checkout
@@ -185,7 +172,7 @@ jobs:
         run: |
             sed -i -e 's/\${ECS_TASK_DEFINITION_NAME}/${{ vars.ECS_TASK_DEFINITION_NAME }}/g' \
                     -e 's/\${ECS_CONTAINER_NAME}/${{ vars.ECS_CONTAINER_NAME }}/g' \
-                    -e 's/\${ECS_CAPACITY_PROVIDER}/${{ vars.ECS_CAPACITY_PROVIDER }}/g' appspec.json
+                    -e 's/\${ECS_CAPACITY_PROVIDER}/${{ vars.ECS_CAPACITY_PROVIDER }}/g' ${{ vars.ECS_APPSPEC }}
 
       - name: inject environment variables to application.properties
         run: |
@@ -224,7 +211,7 @@ jobs:
           service: ${{ vars.ECS_SERVICE }}
           cluster: ${{ vars.ECS_CLUSTER }}
           wait-for-service-stability: true
-          codedeploy-appspec: appspec.json
+          codedeploy-appspec: ${{ vars.ECS_APPSPEC }}
           codedeploy-application: AppECS-${{ vars.ECS_CLUSTER }}-${{ vars.ECS_SERVICE }}
           codedeploy-deployment-group: DgpECS-${{ vars.ECS_CLUSTER }}-${{ vars.ECS_SERVICE }}
 
@@ -233,6 +220,9 @@ jobs:
     needs: Check-folder-changes
     if: needs.Check-folder-changes.outputs.frontend_changed == 'true'
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ptlink-client
 
     steps:
       - name: Checkout
@@ -256,3 +246,35 @@ jobs:
         run: |
           cd ptlink-client
           aws s3 sync dist s3://ptlink-client-bucket --delete
+
+  tag:
+    needs: [Main-pr-generate-and-merge, deploy-backend, deploy-frontend]
+    if: |
+      always() &&
+      (
+        contains(needs.deploy-backend.result, 'success') ||
+        contains(needs.deploy-frontend.result, 'success')
+      )
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Add published label to PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.addLabels({
+              issue_number: ${{ needs.Main-pr-generate-and-merge.outputs.pull-request-number }},
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: ["autorelease: published"]
+            })
+
+      - name: Tag main
+        id: tag-main
+        run: |
+              git fetch origin main
+              git tag -f "${{ needs.Main-pr-generate-and-merge.outputs.version }}"
+              git push -f origin "${{ needs.Main-pr-generate-and-merge.outputs.version }}"
