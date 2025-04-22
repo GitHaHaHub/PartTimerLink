@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.0](https://github.com/GitHaHaHub/PartTimerLink/compare/v1.0.0...v1.1.0) (2025-04-22)
+
+
+### Features
+
+* fix github actions error ([dcf27de](https://github.com/GitHaHaHub/PartTimerLink/commit/dcf27de379b52dff5add136fdc28d1ad30757429))
+
 ## 1.0.0 (2025-04-22)
 
 
