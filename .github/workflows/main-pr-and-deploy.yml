@@ -127,7 +127,7 @@ jobs:
     runs-on: ubuntu-22.04
     defaults:
       run:
-        working-directory: ptlink-client
+        working-directory: ptlink-server
 
     steps:
       - name: Checkout
@@ -244,7 +244,6 @@ jobs:
 
       - name: Deploy static site to S3 bucket
         run: |
-          cd ptlink-client
           aws s3 sync dist s3://ptlink-client-bucket --delete
 
   tag:
