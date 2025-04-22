@@ -211,7 +211,7 @@ jobs:
           service: ${{ vars.ECS_SERVICE }}
           cluster: ${{ vars.ECS_CLUSTER }}
           wait-for-service-stability: true
-          codedeploy-appspec: ${{ env.JAVA_PROJECT_NAME }}/appspec.json
+          codedeploy-appspec: ${{ vars.JAVA_PROJECT_NAME }}/appspec.json
           codedeploy-application: AppECS-${{ vars.ECS_CLUSTER }}-${{ vars.ECS_SERVICE }}
           codedeploy-deployment-group: DgpECS-${{ vars.ECS_CLUSTER }}-${{ vars.ECS_SERVICE }}
 
