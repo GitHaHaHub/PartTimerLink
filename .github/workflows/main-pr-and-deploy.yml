@@ -200,7 +200,7 @@ jobs:
         id: task-def
         uses: aws-actions/amazon-ecs-render-task-definition@v1
         with:
-          task-definition: ${{ vars.ECS_TASK_DEFINITION_FILE }}
+          task-definition: ${{ vars.JAVA_PROJECT_NAME }}/${{ vars.ECS_TASK_DEFINITION_FILE }}
           container-name: ${{ vars.ECS_CONTAINER_NAME }}
           image: ${{ steps.build-image.outputs.image }}
   
@@ -211,7 +211,7 @@ jobs:
           service: ${{ vars.ECS_SERVICE }}
           cluster: ${{ vars.ECS_CLUSTER }}
           wait-for-service-stability: true
-          codedeploy-appspec: ${{ vars.ECS_APPSPEC }}
+          codedeploy-appspec: ${{ vars.JAVA_PROJECT_NAME }}/appspec.json
           codedeploy-application: AppECS-${{ vars.ECS_CLUSTER }}-${{ vars.ECS_SERVICE }}
           codedeploy-deployment-group: DgpECS-${{ vars.ECS_CLUSTER }}-${{ vars.ECS_SERVICE }}
 
