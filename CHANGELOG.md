@@ -1,5 +1,16 @@
 # Changelog
 
+## [2.0.0](https://github.com/GitHaHaHub/PartTimerLink/compare/v1.6.0...v2.0.0) (2025-04-23)
+
+
+### ⚠ BREAKING CHANGES
+
+* fix github actions error
+
+### Bug Fixes
+
+* fix github actions error ([a181a3e](https://github.com/GitHaHaHub/PartTimerLink/commit/a181a3eccea3ae6a3eb4d3fa11933e8687754208))
+
 ## [1.6.0](https://github.com/GitHaHaHub/PartTimerLink/compare/v1.5.0...v1.6.0) (2025-04-22)
 
 

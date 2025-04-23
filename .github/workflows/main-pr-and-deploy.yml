@@ -275,5 +275,6 @@ jobs:
         id: tag-main
         run: |
               git fetch origin main
+              git checkout main
               git tag -f "${{ needs.Main-pr-generate-and-merge.outputs.version }}"
               git push -f origin "${{ needs.Main-pr-generate-and-merge.outputs.version }}"
