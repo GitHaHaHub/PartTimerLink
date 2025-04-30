@@ -1,18 +1,10 @@
 import './App.css'
 import React, { useState } from 'react';
 import axios from 'axios';
-import { useNavigate, createBrowserRouter } from 'react-router'
-
-createBrowserRouter([
-  {
-    path: "/",
-    Component: App,
-  },
-]);
-
+import { useNavigate } from 'react-router'
+import api from './api';
 
 function App() {
-
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const navigate = useNavigate();
@@ -25,7 +17,7 @@ function App() {
 
     // On successful login, redirect to the home page
     // Add your authentication logic here
-    axios.post('http://localhost:8080/generateToken', {
+    api.post('/generateToken', {
       username: username,
       password: password,
     },
