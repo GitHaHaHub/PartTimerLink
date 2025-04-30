@@ -1,7 +1,15 @@
 import './App.css'
 import React, { useState } from 'react';
 import axios from 'axios';
-import { useNavigate } from 'react-router'
+import { useNavigate, createBrowserRouter } from 'react-router'
+
+createBrowserRouter([
+  {
+    path: "/",
+    Component: App,
+  },
+]);
+
 
 function App() {
 
