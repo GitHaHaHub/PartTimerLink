@@ -1,3 +1,12 @@
+.login-wrapper {
+  display: flex;
+  justify-content: center;    /* Centers horizontally */
+  align-items: center;        /* Centers vertically */
+  height: 100vh;              /* Makes wrapper fill full viewport height */
+  width: 100vw;               /* Optional: Ensures full width */
+  background-color: #fff;     /* Optional: matches your design */
+}
+
 :root {
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
