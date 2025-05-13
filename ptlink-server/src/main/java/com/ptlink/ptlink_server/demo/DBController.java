@@ -1,4 +1,4 @@
-package com.ptlink.ptlink_server;
+package com.ptlink.ptlink_server.demo;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;

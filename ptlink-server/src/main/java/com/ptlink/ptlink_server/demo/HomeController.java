@@ -1,4 +1,4 @@
-package com.ptlink.ptlink_server;
+package com.ptlink.ptlink_server.demo;
 
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
