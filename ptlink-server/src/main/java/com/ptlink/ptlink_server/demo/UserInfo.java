@@ -1,13 +1,14 @@
-package com.ptlink.ptlink_server.dto;
+package com.ptlink.ptlink_server.demo;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-@Getter
 @AllArgsConstructor
 @NoArgsConstructor
-public class UserRequest {
+@Getter
+public class UserInfo {
+    private Long userId;
     private String username;
     private String email;
 }

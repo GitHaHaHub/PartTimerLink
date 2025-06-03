@@ -66,7 +66,8 @@ jobs:
                     -e 's/\${AWS_RDS_DB_PORT}/${{ env.AWS_RDS_DB_PORT }}/g' \
                     -e 's/\${AWS_RDS_DB_NAME}/${{ env.AWS_RDS_DB_NAME }}/g' \
                     -e 's/\${AWS_RDS_MASTER_USERNAME}/${{ secrets.AWS_RDS_MASTER_USERNAME }}/g' \
-                    -e 's/\${AWS_RDS_MASTER_PASSWORD}/${{ secrets.AWS_RDS_MASTER_PASSWORD }}/g' src/main/resources/application.properties
+                    -e 's/\${AWS_RDS_MASTER_PASSWORD}/${{ secrets.AWS_RDS_MASTER_PASSWORD }}/g' \
+                    -e 's/\${JWT_SECRET_KEY}/${{ secrets.JWT_SECRET_KEY }}/g' \src/main/resources/application.properties
     
       - name: Build with Gradle Wrapper
         run: ./gradlew build -x test

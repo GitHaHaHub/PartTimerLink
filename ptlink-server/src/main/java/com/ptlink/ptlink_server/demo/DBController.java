@@ -10,9 +10,6 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.ptlink.ptlink_server.dto.UserRequest;
-import com.ptlink.ptlink_server.service.UserService;
-
 @RestController
 public class DBController {
     @Autowired

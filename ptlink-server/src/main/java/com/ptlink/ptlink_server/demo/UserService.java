@@ -1,4 +1,4 @@
-package com.ptlink.ptlink_server.service;
+package com.ptlink.ptlink_server.demo;
 
 import org.springframework.stereotype.Service;
 
@@ -6,16 +6,22 @@ import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 
-import com.ptlink.ptlink_server.dto.UserInfo;
-import com.ptlink.ptlink_server.dto.UserRequest;
+import com.ptlink.ptlink_server.model.Role;
 import com.ptlink.ptlink_server.model.User;
+import com.ptlink.ptlink_server.repository.RoleRepository;
 import com.ptlink.ptlink_server.repository.UserRepository;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 @Service
 public class UserService {
-
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private RoleRepository roleRepository;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
 
     public void addUser(UserRequest userRequest) {
         if (userRepository.findByUsername(userRequest.getUsername()).isPresent()) {
@@ -25,7 +31,10 @@ public class UserService {
             throw new RuntimeException("Email already exists");
         }
 
-        User user = new User(null, userRequest.getUsername(), userRequest.getEmail());
+        Role role = new Role(null, "USER");
+        role = roleRepository.save(role);
+
+        User user = new User(null, userRequest.getUsername(), userRequest.getEmail(), passwordEncoder.encode("pswrd"), role);
         userRepository.save(user);
     }
 
